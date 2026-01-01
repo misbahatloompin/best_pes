@@ -1,0 +1,17 @@
+{
+  "input": "C:\\codes\\best_pes\\bank_data_enhanced.json",
+  "outDir": "C:\\codes\\best_pes\\output",
+  "n_input_posts": 558,
+  "n_output_post_records": 518,
+  "unattributed_posts_skipped": 142,
+  "period": "week",
+  "coverageThreshold": 0.6,
+  "normalization": "minmax",
+  "weights": {
+    "eng": 0.15,
+    "adv": 0.2,
+    "sent": 0.35,
+    "depth": 0.15,
+    "service": 0.15
+  }
+}
