@@ -190,6 +190,114 @@ class Taxon:
     phrases: Tuple[str, ...]  # normalized phrases
 
 
+
+# ---------------------------
+# Generic taxonomy expansion (cross-bank)
+# ---------------------------
+# Prime taxonomy contains some Prime-specific product names (e.g., "Prime Personal Loan").
+# To make the taxonomy portable across other Bangladeshi banks, we add:
+#   1) "brand-stripped" variants (remove bank/brand tokens like "prime", "bank", etc.)
+#   2) generic Bangladeshi financial-product synonyms (English + বাংলা + Banglish)
+#
+# This reduces "Uncategorized" when scoring BRAC Bank / DBBL / EBL / City Bank content
+# using Prime Bank's taxonomy.
+
+BRAND_STOPWORDS = {
+    # Bank words
+    "bank", "banks", "limited", "ltd", "plc", "bd", "bangladesh",
+    # Known bank brand tokens (keep small; used only for stripping variants)
+    "prime", "brac", "dutch", "bangla", "dbbl", "eastern", "ebl", "city",
+    # Prime brand markers sometimes embedded in product names
+    "hasanah", "neera", "neer", "swapna",
+}
+
+def _strip_brand_words(phrase: str) -> str:
+    """Remove common bank/brand tokens from a phrase to produce a more generic match key."""
+    t = normalize_text_bd(phrase)
+    if not t:
+        return ""
+    toks = [w for w in t.split() if w not in BRAND_STOPWORDS]
+    return " ".join(toks).strip()
+
+def _generic_synonyms_for(lower: str) -> set:
+    """
+    Return a set of Bangladesh-relevant generic synonyms for a taxonomy label.
+    This is heuristic by design: it doesn't need to be perfect, just broad enough
+    to catch common post/comment wording across banks.
+    """
+    s = set()
+
+    # --- Loans ---
+    if "loan" in lower or "ঋণ" in lower or "rin" in lower or "emi" in lower:
+        s.update({"loan", "loans", "ঋণ", "রিন", "rin", "lone", "emi", "installment", "কিস্তি", "সুদ", "interest"})
+        if "personal" in lower:
+            s.update({"personal loan", "consumer loan", "ব্যক্তিগত ঋণ", "পার্সোনাল লোন"})
+        if "home" in lower or "house" in lower:
+            s.update({"home loan", "housing loan", "mortgage", "গৃহঋণ", "হোম লোন", "বাড়ি ঋণ"})
+        if "car" in lower or "auto" in lower:
+            s.update({"car loan", "auto loan", "vehicle loan", "গাড়ি ঋণ", "কার লোন"})
+        if "education" in lower or "student" in lower:
+            s.update({"education loan", "student loan", "স্টুডেন্ট লোন", "শিক্ষা ঋণ"})
+        if "travel" in lower:
+            s.update({"travel loan", "ট্রাভেল লোন", "ভ্রমণ ঋণ"})
+        if "marriage" in lower or "wedding" in lower:
+            s.update({"marriage loan", "wedding loan", "বিয়ে ঋণ", "ম্যারেজ লোন"})
+        if "doctor" in lower:
+            s.update({"doctor loan", "physician loan", "ডাক্তার লোন"})
+        if "sme" in lower or "business" in lower:
+            s.update({"sme loan", "business loan", "enterprise loan", "ব্যবসা ঋণ", "উদ্যোক্তা ঋণ"})
+
+    # --- Deposits / Accounts ---
+    if any(k in lower for k in ["deposit", "deposits", "savings", "account", "a/c", "fdr", "dps", "term"]):
+        s.update({"account", "accounts", "a/c", "savings", "deposit", "deposits", "একাউন্ট", "অ্যাকাউন্ট", "সেভিংস", "ডিপোজিট"})
+        s.update({"fdr", "fixed deposit", "term deposit", "fd", "ফিক্সড ডিপোজিট", "এফডিআর"})
+        s.update({"dps", "deposit pension scheme", "monthly deposit", "ডিপিএস", "সঞ্চয়"})
+        if "current" in lower:
+            s.update({"current account", "c/a", "কারেন্ট একাউন্ট"})
+        if "salary" in lower:
+            s.update({"salary account", "payroll", "বেতন একাউন্ট"})
+        if "student" in lower:
+            s.update({"student account", "students", "স্টুডেন্ট একাউন্ট"})
+        if "women" in lower or "neera" in lower:
+            s.update({"women account", "women banking", "নারী একাউন্ট", "উইমেন"})
+        if "islamic" in lower or "hasanah" in lower or "mudaraba" in lower:
+            s.update({"islamic account", "shariah account", "মুদারাবা", "ইসলামিক একাউন্ট", "হালাল"})
+
+    # --- Cards ---
+    if "card" in lower or "visa" in lower or "mastercard" in lower or "debit" in lower or "credit" in lower:
+        s.update({"card", "cards", "visa", "mastercard", "amex", "কার্ড", "ভিসা", "মাস্টারকার্ড"})
+        if "debit" in lower:
+            s.update({"debit card", "ডেবিট কার্ড"})
+        if "credit" in lower:
+            s.update({"credit card", "ক্রেডিট কার্ড", "cc"})
+        if "prepaid" in lower:
+            s.update({"prepaid card", "gift card", "প্রিপেইড কার্ড"})
+
+    # --- Digital / channels ---
+    if any(k in lower for k in ["app", "digital", "internet", "online", "mobile", "sms", "qr"]):
+        s.update({"digital", "online", "internet banking", "online banking", "mobile banking", "mobile app", "app", "apps",
+                 "ইন্টারনেট ব্যাংকিং", "অনলাইন ব্যাংকিং", "মোবাইল ব্যাংকিং", "অ্যাপ", "ডিজিটাল"})
+        s.update({"otp", "password", "login", "sign in", "লগইন", "পাসওয়ার্ড", "ওটিপি"})
+        s.update({"qr", "qr pay", "scan", "স্ক্যান", "কিউআর"})
+
+    # --- Remittance / NRB ---
+    if any(k in lower for k in ["remit", "remittance", "nrb", "expat", "prabashi", "wage"]):
+        s.update({"remittance", "remit", "nrb", "expat", "prabashi", "প্রবাসী", "রেমিট্যান্স", "ওয়েজ আর্নার"})
+
+    # --- Service touchpoints ---
+    if any(k in lower for k in ["atm", "branch", "agent", "call", "hotline", "service", "support"]):
+        s.update({"atm", "booth", "atm booth", "এটিএম", "বুথ"})
+        s.update({"branch", "branches", "শাখা"})
+        s.update({"agent banking", "agent", "এজেন্ট ব্যাংকিং", "এজেন্ট"})
+        s.update({"customer service", "support", "help", "hotline", "call center", "কাস্টমার সার্ভিস", "হেল্পলাইন"})
+
+    # --- Offers / campaigns ---
+    if any(k in lower for k in ["offer", "discount", "cashback", "campaign", "promo", "promotion"]):
+        s.update({"offer", "offers", "discount", "cashback", "promo", "promotion", "campaign",
+                 "অফার", "ডিসকাউন্ট", "ক্যাশব্যাক", "প্রোমো", "ক্যাম্পেইন"})
+
+    return s
+
 def _expand_phrases(raw: str) -> List[str]:
     """
     Expand a taxonomy string into a set of match phrases:
@@ -208,6 +316,13 @@ def _expand_phrases(raw: str) -> List[str]:
 
     # Heuristic variants
     lower = base_no_paren.lower()
+    # Cross-bank: add a brand-stripped variant (e.g., "Prime Personal Loan" -> "personal loan")
+    stripped = _strip_brand_words(base_no_paren)
+    if stripped:
+        phrases.add(stripped)
+
+    # Cross-bank: add Bangladesh-relevant generic product synonyms for this label
+    phrases.update(_generic_synonyms_for(lower))
     if "loan" in lower:
         phrases.update({"loan", "rin", "ঋণ", "লোন"})
     if "deposit" in lower or "savings" in lower or "account" in lower:
@@ -299,7 +414,7 @@ def best_taxonomy_match(text: str, taxons: List[Taxon], min_score: float = 2.0) 
     return best
 
 
-def apply_taxonomy(df: pd.DataFrame, text_cols: List[str], taxons: List[Taxon], prefix: str) -> pd.DataFrame:
+def apply_taxonomy(df: pd.DataFrame, text_cols: List[str], taxons: List[Taxon], prefix: str, min_score: float = 2.0) -> pd.DataFrame:
     """
     Apply taxonomy to a dataframe given the list of text columns to consider.
     Adds:
@@ -312,7 +427,7 @@ def apply_taxonomy(df: pd.DataFrame, text_cols: List[str], taxons: List[Taxon], 
                 parts.append(str(r[c]))
         return " ".join(parts)
 
-    matches = df.apply(lambda r: best_taxonomy_match(row_text(r), taxons), axis=1)
+    matches = df.apply(lambda r: best_taxonomy_match(row_text(r), taxons, min_score=min_score), axis=1)
     df[f"{prefix}_theme"] = matches.apply(lambda x: x[0])
     df[f"{prefix}_category"] = matches.apply(lambda x: x[1])
     df[f"{prefix}_subcategory"] = matches.apply(lambda x: x[2])
@@ -379,6 +494,126 @@ def lexicon_sentiment(text: str) -> float:
     score = (pos - neg) / max(1, pos + neg)
     return float(np.clip(score, -1.0, 1.0))
 
+# ---------------------------
+# Stronger multilingual sentiment (optional)
+# ---------------------------
+# If `transformers` is installed, we can use a multilingual sentiment model.
+# This helps for English + বাংলা. Note: romanized Bangla ("Banglish") may still
+# be imperfect; lexicon fallback keeps coverage.
+#
+# Defaults:
+#   - engine="auto": try transformers; fallback to lexicon if unavailable
+#   - model: CardiffNLP XLM-R sentiment (good multilingual baseline)
+#
+# You can override via CLI flags: --sentiment_engine and --sentiment_model
+
+_DEFAULT_SENT_MODEL = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+
+def _label_to_score(label: str, score: float) -> float:
+    """
+    Convert common transformer sentiment labels to a [-1, +1] score.
+    Supports:
+      - POSITIVE/NEGATIVE/NEUTRAL
+      - LABEL_0/1/2 (model dependent; handled conservatively)
+      - 1..5 stars (nlptown-style)
+    """
+    if label is None:
+        return 0.0
+    lab = str(label).strip().lower()
+
+    # Star ratings
+    m = re.match(r"^(\d)\s*star", lab)
+    if m:
+        stars = int(m.group(1))
+        # 1->-1, 3->0, 5->+1
+        return float(np.clip((stars - 3) / 2.0, -1.0, 1.0))
+
+    if "pos" in lab:
+        return float(np.clip(score, 0.0, 1.0))
+    if "neg" in lab:
+        return float(-np.clip(score, 0.0, 1.0))
+    if "neu" in lab:
+        return 0.0
+
+    # Some models use LABEL_0/1/2 without docs. Keep conservative:
+    # treat LABEL_2 as positive, LABEL_0 as negative, LABEL_1 neutral.
+    if lab in {"label_2"}:
+        return float(np.clip(score, 0.0, 1.0))
+    if lab in {"label_0"}:
+        return float(-np.clip(score, 0.0, 1.0))
+    if lab in {"label_1"}:
+        return 0.0
+
+    return 0.0
+
+
+class SentimentScorer:
+    """
+    Sentiment scorer with a "use-if-installed" transformers backend.
+
+    engine:
+      - "auto": try transformers; fallback to lexicon
+      - "transformers": require transformers (fallback to lexicon if load fails)
+      - "lexicon": always use lexicon
+    """
+    def __init__(self, engine: str = "auto", model_name: str = _DEFAULT_SENT_MODEL, batch_size: int = 32):
+        self.engine = (engine or "auto").lower()
+        self.model_name = model_name or _DEFAULT_SENT_MODEL
+        self.batch_size = int(batch_size)
+        self._pipe = None
+        self._backend = "lexicon"
+
+        if self.engine in {"auto", "transformers"}:
+            self._pipe = self._try_load_transformers(self.model_name)
+            if self._pipe is not None:
+                self._backend = "transformers"
+            elif self.engine == "transformers":
+                print("[warn] transformers sentiment requested but unavailable; falling back to lexicon.")
+
+    @staticmethod
+    def _try_load_transformers(model_name: str):
+        try:
+            from transformers import pipeline  # type: ignore
+        except Exception:
+            return None
+        try:
+            # device=-1 => CPU; keep runtime predictable
+            return pipeline("sentiment-analysis", model=model_name, tokenizer=model_name, device=-1, truncation=True)
+        except Exception:
+            # Some pipelines infer tokenizer; try without specifying
+            try:
+                return pipeline("sentiment-analysis", model=model_name, device=-1, truncation=True)
+            except Exception:
+                return None
+
+    def score_texts(self, texts: List[str]) -> List[float]:
+        if self._backend == "transformers" and self._pipe is not None:
+            out_scores: List[float] = []
+            # Batch for speed; transformers pipeline accepts list[str]
+            for i in range(0, len(texts), self.batch_size):
+                chunk = [t if isinstance(t, str) else "" for t in texts[i:i+self.batch_size]]
+                try:
+                    preds = self._pipe(chunk)
+                except Exception:
+                    # If anything goes wrong, fallback chunk-wise to lexicon
+                    preds = None
+                if preds is None:
+                    out_scores.extend([lexicon_sentiment(t) for t in chunk])
+                else:
+                    for p in preds:
+                        out_scores.append(_label_to_score(p.get("label"), float(p.get("score", 0.0))))
+            # Clip to [-1, +1]
+            return [float(np.clip(s, -1.0, 1.0)) for s in out_scores]
+
+        # Lexicon fallback
+        return [lexicon_sentiment(t) for t in texts]
+
+    def score_series(self, s: pd.Series) -> pd.Series:
+        texts = s.astype(str).fillna("").tolist()
+        scores = self.score_texts(texts)
+        return pd.Series(scores, index=s.index)
+
+
 
 def has_any(text: str, phrases: Iterable[str]) -> bool:
     t = normalize_text_bd(text)
@@ -436,9 +671,11 @@ def estimate_severity(text: str) -> int:
     return 2
 
 
-def add_comment_features(df: pd.DataFrame, text_col: str) -> pd.DataFrame:
+def add_comment_features(df: pd.DataFrame, text_col: str, sentiment_scorer: Optional[SentimentScorer] = None) -> pd.DataFrame:
     df = df.copy()
-    df["sentiment"] = df[text_col].astype(str).map(lexicon_sentiment)
+    if sentiment_scorer is None:
+        sentiment_scorer = SentimentScorer(engine="lexicon")
+    df["sentiment"] = sentiment_scorer.score_series(df[text_col])
     df["is_question"] = df[text_col].astype(str).map(is_question).astype(int)
     df["is_complaint"] = df[text_col].astype(str).map(is_complaint).astype(int)
     df["is_feature_request"] = df[text_col].astype(str).map(is_feature_request).astype(int)
@@ -734,12 +971,15 @@ def main():
     posts = pd.read_csv(args.posts)
     comments = pd.read_csv(args.comments)
     taxons = load_taxonomy(args.taxonomy)
+    sentiment_scorer = SentimentScorer(engine=args.sentiment_engine, model_name=args.sentiment_model)
+    print(f"[info] Sentiment backend: {sentiment_scorer._backend} (engine={args.sentiment_engine}, model={args.sentiment_model})")
+
 
     # --- STEP 1: Apply taxonomy ---
     print("[1/4] Applying taxonomy...")
 
     # Posts: use caption + (optional) media items text if present
-    posts = apply_taxonomy(posts, text_cols=["post_caption"], taxons=taxons, prefix="post")
+    posts = apply_taxonomy(posts, text_cols=["post_caption"], taxons=taxons, prefix="post", min_score=args.tax_min_score)
 
     # Comments: use comment text + parent post caption as context
     comments = apply_taxonomy(
@@ -747,6 +987,7 @@ def main():
         text_cols=["comment_comment_text", "post_caption"],
         taxons=taxons,
         prefix="comment",
+        min_score=args.tax_min_score,
     )
 
     posts_out = os.path.join(args.outdir, "posts_with_taxonomy.csv")
@@ -774,7 +1015,7 @@ def main():
     bank_col = next((c for c in bank_col_candidates if c in comments_feat.columns), None)
     comments_feat["bank"] = comments_feat[bank_col].map(standardize_bank) if bank_col else "Unknown"
 
-    comments_feat = add_comment_features(comments_feat, text_col="comment_comment_text")
+    comments_feat = add_comment_features(comments_feat, text_col="comment_comment_text", sentiment_scorer=sentiment_scorer)
 
     posts_feat_out = os.path.join(args.outdir, "posts_with_features.csv")
     comments_feat_out = os.path.join(args.outdir, "comments_with_features.csv")
