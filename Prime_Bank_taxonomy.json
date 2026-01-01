@@ -1,0 +1,204 @@
+{
+  "taxonomy": {
+    "themes": [
+      {
+        "name": "Conventional Banking",
+        "categories": [
+          {
+            "name": "Deposits (Save)",
+            "subCategories": [
+              "Prime One Savings Account",
+              "Prime First Account",
+              "Prime Porijon Savings",
+              "Fixed Deposit (FDR)",
+              "Monthly Benefit Scheme (DPS)",
+              "Contributory Savings Scheme"
+            ]
+          },
+          {
+            "name": "Loans (Borrow)",
+            "subCategories": [
+              "Prime Personal Loan",
+              "Swapna Neer Home Loan",
+              "Car Loan",
+              "Doctor's Loan",
+              "Marriage Loan",
+              "Travel Loan",
+              "Education Loan"
+            ]
+          },
+          {
+            "name": "Cards",
+            "subCategories": [
+              "Visa Gold Credit Card",
+              "Platinum Credit Card",
+              "World Mastercard",
+              "ZERO by Prime Bank (Fee-Free Card)",
+              "Dual Currency Debit Card",
+              "JCB Credit Card"
+            ]
+          },
+          {
+            "name": "Neera (Women's Banking)",
+            "subCategories": [
+              "Neera Savings Account",
+              "Neera Loan",
+              "Women Entrepreneur Financing"
+            ]
+          },
+          {
+            "name": "Priority Banking",
+            "subCategories": [
+              "Priority Banking Services",
+              "LoungeKey Access",
+              "Dedicated Relationship Manager"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Islamic Banking (Hasanah)",
+        "categories": [
+          {
+            "name": "Deposits",
+            "subCategories": [
+              "Mudaraba Savings Account",
+              "Al-Wadeeah Current Account",
+              "Hasanah Monthly Income Scheme",
+              "Hasanah Hajj Scheme",
+              "Hasanah Term Deposit",
+              "Sadaqah Jariyah Account"
+            ]
+          },
+          {
+            "name": "Investments",
+            "subCategories": [
+              "Hasanah Home Investment (Manjil)",
+              "Hasanah Auto Investment (Burak)",
+              "Hasanah Medical Investment (Shifa)",
+              "Hasanah Home Appliances (Asbab)",
+              "Bai-Muazzal Investment"
+            ]
+          },
+          {
+            "name": "Cards",
+            "subCategories": [
+              "Islamic Credit Card",
+              "Islamic Debit Card"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "SME Banking",
+        "categories": [
+          {
+            "name": "Loans",
+            "subCategories": [
+              "Prime Shahaj (Unsecured Loan)",
+              "Prime Start-up Loan",
+              "Anchol Rin (Women Entrepreneurs)",
+              "Moushami Rin (Seasonal Loan)",
+              "Sampad Rin (Capital Loan)",
+              "Chalti Rin (Working Capital)"
+            ]
+          },
+          {
+            "name": "Deposits",
+            "subCategories": [
+              "SME Current Account",
+              "Prime Business Plus"
+            ]
+          },
+          {
+            "name": "Trade Services",
+            "subCategories": [
+              "SME Trade Finance",
+              "SME Debit Card with Remittance Facility"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Corporate Banking",
+        "categories": [
+          {
+            "name": "Financing Solutions",
+            "subCategories": [
+              "Working Capital Finance",
+              "Project Finance",
+              "Syndication Loan",
+              "Term Loans",
+              "Structured Finance"
+            ]
+          },
+          {
+            "name": "Trade Services",
+            "subCategories": [
+              "Letter of Credit (LC)",
+              "Bank Guarantees",
+              "Export Finance",
+              "Import Finance"
+            ]
+          },
+          {
+            "name": "Cash Management",
+            "subCategories": [
+              "Nationwide Collection Services",
+              "Payment Solutions",
+              "Liquidity Management"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "NRB Banking",
+        "categories": [
+          {
+            "name": "Accounts",
+            "subCategories": [
+              "NRB Taka Account",
+              "Non-Resident Foreign Currency Deposit (NFCD)",
+              "Resident Foreign Currency Deposit (RFCD)",
+              "Nita Account"
+            ]
+          },
+          {
+            "name": "Remittance & Investments",
+            "subCategories": [
+              "RemitPrime",
+              "Wage Earners' Development Bond",
+              "US Dollar Premium Bond",
+              "US Dollar Investment Bond"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Digital Solution",
+        "categories": [
+          {
+            "name": "Platforms",
+            "subCategories": [
+              "MyPrime App",
+              "PrimePlus (Account Opening)",
+              "PrimePay",
+              "PrimeAgrim"
+            ]
+          },
+          {
+            "name": "Services",
+            "subCategories": [
+              "Digital Nano Loans",
+              "Utility Bill Payment",
+              "Fund Transfer",
+              "Merchant Payments"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "brandName": "Prime Bank",
+  "exportedAt": "2025-12-29T22:51:35.523Z"
+}

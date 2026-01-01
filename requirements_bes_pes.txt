@@ -1,0 +1,9 @@
+pandas
+numpy
+openpyxl
+python-docx
+
+# Optional (stronger multilingual sentiment):
+# transformers>=4.35
+# torch
+# sentencepiece
