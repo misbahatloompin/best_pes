@@ -1,77 +1,66 @@
-# BES/PES Pipeline (Bangladesh Banks Facebook)
+# Brand Experience Score (BES) Calculator (Node.js)
 
-This package contains `bes_pes_pipeline_bd_v2.py`, an offline pipeline that:
+This script computes a **Brand Experience Score** from the post-level engagement fields in `bank_data_enhanced.json`.
 
-1. Applies the Prime Bank product taxonomy (theme → category → subcategory) to:
-   - `denormalized_posts_wide.csv`
-   - `denormalized_comments_wide.csv`
+It implements the pipeline you asked for (Steps 2–5):
+- **2) Brand attribution** (Owned vs Earned + bank attribution)
+- **3) Per-post components** (Engagement Points, Advocacy, SentimentProxy, Depth, Service)
+- **4) Combine** into `BES_raw` and normalize to `BES_0_100`
+- **5) Aggregate** to a brand-period dataset (weekly/monthly)
 
-2. Computes Brand Experience Score (BES) and Product Experience Score (PES) weekly
-   following the *Brand and Product Experience* methodology.
+## Requirements
+- Node.js 18+ recommended (works with Node 16+ if available).
 
-3. Aggregates BES/PES per **week × bank × taxonomy level** (theme/category/subcategory).
+## Files
+- `bes.js` — main script
+- Output folder (created when you run):
+  - `output/bes_posts.csv` — post-level records (after attribution “explode”)
+  - `output/bes_brand_period.csv` — brand x period aggregated scores
+  - `output/bes_brand_period.json` — same as JSON
+  - `output/run_summary.json` — run parameters + counts
 
-4. Produces *wide dashboard* CSVs where each row is **week × bank** and columns are
-   BES/PES for each taxonomy slice.
+## How to run
 
-## New additions in v2
-
-### 1) Optional multilingual sentiment via Transformers (use-if-installed)
-- If you install `transformers` + `torch`, the script will use a multilingual sentiment model.
-- If not installed (or model load fails), it automatically falls back to the built-in lexicon scorer.
-
-CLI flags:
-- `--sentiment_engine auto|transformers|lexicon` (default: `auto`)
-- `--sentiment_model <hf-model-name>` (default: `cardiffnlp/twitter-xlm-roberta-base-sentiment`)
-
-### 2) Cross-bank taxonomy expansion (reduces Uncategorized for non‑Prime banks)
-Prime taxonomy contains Prime-specific product names (e.g., “Prime Personal Loan”).
-The script now:
-- adds a **brand‑stripped** variant (“personal loan”)
-- adds **generic Bangladesh-relevant synonyms** (English + বাংলা + Banglish)
-This improves matching for BRAC Bank / DBBL / EBL / City Bank content.
-
-## Install
+From the folder containing `bes.js` and the JSON:
 
 ```bash
-pip install -r requirements_bes_pes.txt
+node bes.js --input bank_data_enhanced.json --out output
 ```
 
-Optional (better sentiment):
+### Common options
+
+**Monthly instead of weekly**
+```bash
+node bes.js --input bank_data_enhanced.json --out output --period month
+```
+
+**Include unattributed earned posts** (posts where no bank could be inferred)
+```bash
+node bes.js --input bank_data_enhanced.json --out output --includeUnattributed true
+```
+
+**Change comment-export coverage threshold** for the Depth component
+```bash
+node bes.js --input bank_data_enhanced.json --out output --coverageThreshold 0.8
+```
+
+**Choose normalization method**
+- `minmax` (default): scales within (period, source_type) to 0–100
+- `zscore`: z-score within (period, source_type) then squashed to 0–100
+- `none`: skips normalized score
 
 ```bash
-pip install transformers torch sentencepiece
+node bes.js --input bank_data_enhanced.json --out output --normalization zscore
 ```
 
-## Run
-
+**Adjust weights** (they are re-normalized to sum to 1)
 ```bash
-python bes_pes_pipeline_bd_v2.py \
-  --posts denormalized_posts_wide.csv \
-  --comments denormalized_comments_wide.csv \
-  --taxonomy Prime_Bank_taxonomy.json \
-  --method_doc "Brand and Product Experience.docx" \
-  --outdir outputs
+node bes.js --input bank_data_enhanced.json --out output --weights "eng=0.15,adv=0.20,sent=0.35,depth=0.15,service=0.15"
 ```
 
-Useful knobs:
-
-```bash
-python bes_pes_pipeline_bd_v2.py ... \
-  --tax_min_score 1.5 \
-  --sentiment_engine auto \
-  --sentiment_model cardiffnlp/twitter-xlm-roberta-base-sentiment
-```
-
-## Outputs
-
-- `posts_with_taxonomy.csv`
-- `comments_with_taxonomy.csv`
-- `comments_scored.csv`
-- `weekly_bes_pes_theme.csv`
-- `weekly_bes_pes_category.csv`
-- `weekly_bes_pes_subcategory.csv`
-- `wide_dashboard_theme.csv`
-- `wide_dashboard_category.csv`
-- `wide_dashboard_subcategory.csv`
-- `BES_PES_outputs.xlsx`
+## Notes / assumptions
+- **Owned vs Earned**: uses `page_profile_url` containing `facebook.com/groups/` to label earned groups.
+- **Brand attribution** for earned posts “explodes” multi-tag posts into **one row per tagged bank**.
+- **SentimentProxy** is derived from reaction mix (Love/Care/Wow/Haha vs Sad/Angry). It is not full NLP sentiment.
+- **Depth** uses `comments_export_coverage`, `unique_comment_authors`, and `comment_replies_sum`. If export coverage is below the threshold, Depth is set to 0 for that post.
+- **ServiceScore** uses `median_reply_time_minutes` when available; if missing, it contributes 0.
