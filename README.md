@@ -1,66 +1,40 @@
-# Brand Experience Score (BES) Calculator (Node.js)
+# Prime Bank Social Media Presence Dashboard — Documentation
 
-This script computes a **Brand Experience Score** from the post-level engagement fields in `bank_data_enhanced.json`.
+This documentation explains how the **Prime Bank Social Media Presence Dashboard** is generated from the provided datasets, how metrics are calculated and displayed, and how the Executive Summary and Follow-up Actions pages are produced.
 
-It implements the pipeline you asked for (Steps 2–5):
-- **2) Brand attribution** (Owned vs Earned + bank attribution)
-- **3) Per-post components** (Engagement Points, Advocacy, SentimentProxy, Depth, Service)
-- **4) Combine** into `BES_raw` and normalize to `BES_0_100`
-- **5) Aggregate** to a brand-period dataset (weekly/monthly)
+- **App type:** React (single-file component)
+- **Primary goal:** Analyze Prime Bank’s social media performance and compare vs a competitor across:
+  - **Owned** (Prime Bank pages)
+  - **Earned** (community/groups / external surfaces attributed to the brand)
+- **Tabs (left → right):**
+  1. Dashboard
+  2. Follow-up actions
+  3. Executive summary
+  4. Glossary
 
-## Requirements
-- Node.js 18+ recommended (works with Node 16+ if available).
+## What you need to run it
 
-## Files
-- `bes.js` — main script
-- Output folder (created when you run):
-  - `output/bes_posts.csv` — post-level records (after attribution “explode”)
-  - `output/bes_brand_period.csv` — brand x period aggregated scores
-  - `output/bes_brand_period.json` — same as JSON
-  - `output/run_summary.json` — run parameters + counts
+### Required datasets
+Upload both datasets to the dashboard UI:
+- `bes_brand_period` (CSV or JSON)
+- `bes_posts` (CSV or JSON)
 
-## How to run
+### What happens after upload
+Once both datasets are loaded:
+- **Dashboard** becomes interactive (Owned/Earned, Prime-only or competitor compare, period selection, trend metric selection).
+- **Follow-up actions** generates a structured action backlog using:
+  - Prime’s observed patterns (Owned + Earned)
+  - Competitor examples (tone/format inspiration)
+- **Executive summary** produces a last-quarter snapshot (last 13 periods per source type).
+- **Glossary** contains definitions and supports click-to-jump from the rest of the UI.
 
-From the folder containing `bes.js` and the JSON:
+## Where to look next
+- `DATA_INGESTION.md`
+- `METRICS.md`
+- `UI_BEHAVIOR.md`
+- `EXECUTIVE_SUMMARY.md`
+- `FOLLOW_UP_ACTIONS.md`
+- `SUGGESTED_PROMPTS.md`
+- `TROUBLESHOOTING.md`
 
-```bash
-node bes.js --input bank_data_enhanced.json --out output
-```
-
-### Common options
-
-**Monthly instead of weekly**
-```bash
-node bes.js --input bank_data_enhanced.json --out output --period month
-```
-
-**Include unattributed earned posts** (posts where no bank could be inferred)
-```bash
-node bes.js --input bank_data_enhanced.json --out output --includeUnattributed true
-```
-
-**Change comment-export coverage threshold** for the Depth component
-```bash
-node bes.js --input bank_data_enhanced.json --out output --coverageThreshold 0.8
-```
-
-**Choose normalization method**
-- `minmax` (default): scales within (period, source_type) to 0–100
-- `zscore`: z-score within (period, source_type) then squashed to 0–100
-- `none`: skips normalized score
-
-```bash
-node bes.js --input bank_data_enhanced.json --out output --normalization zscore
-```
-
-**Adjust weights** (they are re-normalized to sum to 1)
-```bash
-node bes.js --input bank_data_enhanced.json --out output --weights "eng=0.15,adv=0.20,sent=0.35,depth=0.15,service=0.15"
-```
-
-## Notes / assumptions
-- **Owned vs Earned**: uses `page_profile_url` containing `facebook.com/groups/` to label earned groups.
-- **Brand attribution** for earned posts “explodes” multi-tag posts into **one row per tagged bank**.
-- **SentimentProxy** is derived from reaction mix (Love/Care/Wow/Haha vs Sad/Angry). It is not full NLP sentiment.
-- **Depth** uses `comments_export_coverage`, `unique_comment_authors`, and `comment_replies_sum`. If export coverage is below the threshold, Depth is set to 0 for that post.
-- **ServiceScore** uses `median_reply_time_minutes` when available; if missing, it contributes 0.
+Generated on 2026-01-02.
